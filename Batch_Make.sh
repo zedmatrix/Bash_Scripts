@@ -1,3 +1,5 @@
+#!/bin/bash
+# Usage # Batch_Make 
 path=$PWD
 audio=$1
 pattern=$2
@@ -17,9 +19,6 @@ case $audio in
     printf 'Video_Encode.sh \"%s\"\n' *.mp4 > Batch.sh
     printf 'Video_Encode.sh \"%s\"\n' *.ts >> Batch.sh
     ;;
-  P)
-    printf 'Norm_Audio.sh \"%s\"\n' "$pattern"*.mp4 > Batch.sh
-    ;;
   W)
     printf 'Web_ReEncode.sh \"%s\"\n' *.mp4 | sort > Batch.sh
     printf 'Web_ReEncode.sh \"%s\"\n' *.mkv | sort >> Batch.sh
@@ -31,6 +30,7 @@ case $audio in
     printf 'Youtube_Encode.sh \"%s\"\n' *.webm | sort >> Batch.sh
     ;;
   *)
-    printf 'TV_Encode.sh \"%s\"\n' *.mp4 > Batch.sh
+    printf 'Usage: ./Batch_Make.sh ( D || M || N || V || W || Y )\n'
+    printf 'Optional: pattern as second like ( mp3 || ogg || flac )\n'
     ;;
 esac

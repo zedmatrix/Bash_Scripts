@@ -22,15 +22,11 @@ case $audio in
     ;;
   W)
     printf 'Web_ReEncode.sh \"%s\"\n' *.mp4 | sort > Batch.sh
-    printf 'Web_ReEncode.sh \"%s\"\n' *.mkv | sort >> Batch.sh
-    printf 'Web_ReEncode.sh \"%s\"\n' *.webm | sort >> Batch.sh
     ;;
   Y)
     printf 'Youtube_Encode.sh \"%s\"\n' *.mp4 | sort > Batch.sh
-    printf 'Youtube_Encode.sh \"%s\"\n' *.mkv | sort >> Batch.sh
-    printf 'Youtube_Encode.sh \"%s\"\n' *.webm | sort >> Batch.sh
     ;;
   *)
-    printf 'TV_Encode.sh \"%s\"\n' *.mp4 > Batch.sh
+    printf 'Audio_ReEncode.sh \"%s\"\n' *.mp4 > Batch.sh
     ;;
 esac

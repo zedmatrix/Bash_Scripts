@@ -14,6 +14,7 @@ mount-vkfs.sh
 mount -v lfs-root.squashfs $LFS -t squashfs -o loop
 chroot $LFS /bin/bash
 ```
+or `chroot $LFS /usr/bin/env -i HOME=/root TERM=$TERM PATH=/bin:/usr/bin:/sbin:/usr/sbin /bin/bash --login`
 
 ### Compressing initrd.img from create_initramfs.sh
 ```
@@ -22,7 +23,6 @@ mv -v init.sh init
 chmod +x init
 find . -print0 | cpio --null -H newc -o | xz --check=crc32 -9 > ../initrd.img
 ```
-
 ### Create a grub-root layout
 ```
 mkdir -pv /zbuild/grub-root/boot/grub
@@ -31,17 +31,18 @@ cp -v /boot/vmlinuz /zbuild/grub-root/boot
 cp -v /zbuild/initrd.img /zbuild/grub-root/boot
 cp -v /zbuild/lfs-root.squashfs /zbuild/grub-root/boot
 ```
-
 ### Create iso image file
 ```
 cd /zbuild
 grub-mkrescue -o lfs-dvd.iso grub-root
 ```
-
 ### Simple Qemu Test
 ```
 qemu-system-x86_64 -enable-kvm -m 4G -cdrom lfs-dvd.iso -boot d -serial mon:stdio -vga qxl
-
-qemu-system-x86_64 -enable-kvm -m 8G -cdrom lfs-dvd.iso -boot d -serial mon:stdio -vga qxl \
+```
+### Advance Qemu Test
+```
+qemu-system-x86_64 -enable-kvm -m 8G -smp 4 -cpu host -cdrom lfs-dvd.iso \
+ -boot d -serial mon:stdio -vga qxl \
  -netdev user,id=net0,hostfwd=tcp::2020-:22 -device virtio-net-pci,netdev=net0
 ```

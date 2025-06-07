@@ -8,10 +8,11 @@ mksquashfs /mnt/lfs lfs-root.squashfs -comp xz -Xbcj x86 -e boot sources zbuild
 ```
 ### Testing SquashFS
 ```
-mkdir -v /mnt/squash-root
+LFS=/mnt/squash-root
+mkdir -v $LFS
 mount-vkfs.sh
-mount -v lfs-root.squashfs /mnt/squash -t squashfs -o loop
-chroot /mnt/squash /bin/bash
+mount -v lfs-root.squashfs $LFS -t squashfs -o loop
+chroot $LFS /bin/bash
 ```
 
 ### Compressing initrd.img from create_initramfs.sh

@@ -1,26 +1,43 @@
 ## Initramfs Project for Linux From Scratch
 
-Once create_initramfs.sh is made
+### Creating SquashFS
+```
+cd /zbuild
+mount -v /dev/sdb3 /mnt/lfs
+mksquashfs /mnt/lfs lfs-root.squashfs -comp xz -Xbcj x86 -e boot sources zbuild
+```
+### Testing SquashFS
+```
+mkdir -v /mnt/squash-root
+mount-vkfs.sh
+mount -v lfs-root.squashfs /mnt/squash -t squashfs -o loop
+chroot /mnt/squash /bin/bash
+```
+
+### Compressing initrd.img from create_initramfs.sh
 ```
 cd /zbuild/initramfs
 mv -v init.sh init
 chmod +x init
 find . -print0 | cpio --null -H newc -o | xz --check=crc32 -9 > ../initrd.img
 ```
-Create a grub-root layout
+
+### Create a grub-root layout
 ```
 mkdir -pv /zbuild/grub-root/boot/grub
 cp -v grub.cfg /zbuild/grub-root/boot/grub
-cp -v initrd.img /zbuild/grub-root/boot
-cp -v vmlinuz /zbuild/grub-root/boot
-cp -v lfs-root.squashfs /zbuild/grub-root/boot
+cp -v /boot/vmlinuz /zbuild/grub-root/boot
+cp -v /zbuild/initrd.img /zbuild/grub-root/boot
+cp -v /zbuild/lfs-root.squashfs /zbuild/grub-root/boot
 ```
-Create iso image file
+
+### Create iso image file
 ```
 cd /zbuild
 grub-mkrescue -o lfs-dvd.iso grub-root
 ```
-Simple Qemu Test
+
+### Simple Qemu Test
 ```
 qemu-system-x86_64 -enable-kvm -m 4G -cdrom lfs-dvd.iso -boot d -serial mon:stdio -vga qxl
 

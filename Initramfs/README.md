@@ -1,1 +1,3 @@
-# Initramfs Project for Linux From Scratch
+## Initramfs Project for Linux From Scratch
+
+Once the initramfs is made

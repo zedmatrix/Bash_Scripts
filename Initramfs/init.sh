@@ -12,16 +12,26 @@ problem() {
 mount -n -t devtmpfs devtmpfs /dev
 mount -n -t proc     proc     /proc
 mount -n -t sysfs    sysfs    /sys
-sleep 2
+mount --mkdir -t tmpfs tmpfs /run
+mount --mkdir -t devpts devpts /dev/pts -o gid=5,mode=620
+mount --mkdir -t tmpfs tmpfs /dev/shm
+mount --mkdir -t cgroup2 none /sys/fs/cgroup
+[ ! -d /run/lock ] && mkdir -p /run/lock
 
-read -r cmdline < /proc/cmdline
+if [ ! -d /sys/firmware/efi/efivars ]; then
+    mkdir -p /sys/firmware/efi/efivars
+fi
+
+if ! mountpoint -q /sys/firmware/efi/efivars; then
+    mount -t efivarfs efivarfs /sys/firmware/efi/efivars
+fi
 
 # Detect rd.live.ram=1
+read -r cmdline < /proc/cmdline
 echo "$cmdline" | grep -q 'rd.live.ram=1' && COPYTORAM=1
 
 # Mount CD-ROM
 mount -t iso9660 /dev/sr0 /mnt/cdrom || problem "Failed to mount /dev/sr0"
-sleep 2
 
 # Load modules (if needed)
 modprobe loop 2>/dev/null || insmod /usr/lib/loop.ko
@@ -56,4 +66,8 @@ echo "Switching to overlay root..."
 mount --move /proc /mnt/merged/proc
 mount --move /sys  /mnt/merged/sys
 mount --move /dev  /mnt/merged/dev
+mount --move /run  /mnt/merged/run
+mount --move /dev/pts /mnt/merged/dev/pts
+mount --move /dev/shm /mnt/merged/dev/shm
+mount --move /sys/fs/cgroup /mnt/merged/sys/fs/cgroup
 exec switch_root /mnt/merged /sbin/init

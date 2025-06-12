@@ -1,11 +1,14 @@
 #!/bin/sh
 PATH=/usr/bin:/usr/sbin
 export PATH
+insmod /usr/lib/hfs.ko
+insmod /usr/lib/hfsplus.ko
 
 problem() {
-   printf "Encountered: %s \n\nDropping you to a shell.\n\n" "$*"
-   export PATH=/usr/bin:/usr/sbin
-   exec sh
+    printf "Encountered: %s \n\nDropping you to a shell.\n\n" "$*"
+    export PATH=/usr/bin:/usr/sbin
+    exec </dev/console >/dev/console 2>&1
+    exec /bin/sh
 }
 
 # Mount essential filesystems
@@ -18,28 +21,40 @@ mount --mkdir -t tmpfs tmpfs /dev/shm
 mount --mkdir -t cgroup2 none /sys/fs/cgroup
 [ ! -d /run/lock ] && mkdir -p /run/lock
 
-if [ ! -d /sys/firmware/efi/efivars ]; then
-    mkdir -p /sys/firmware/efi/efivars
-fi
-
-if ! mountpoint -q /sys/firmware/efi/efivars; then
-    mount -t efivarfs efivarfs /sys/firmware/efi/efivars
-fi
+# Start udev
+/sbin/udevd --daemon
+udevadm trigger
+udevadm settle
 
 # Detect rd.live.ram=1
 read -r cmdline < /proc/cmdline
 echo "$cmdline" | grep -q 'rd.live.ram=1' && COPYTORAM=1
 
-# Mount CD-ROM
-mount -t iso9660 /dev/sr0 /mnt/cdrom || problem "Failed to mount /dev/sr0"
+echo "Locating boot media..."
+label="LFSLIVE_2025"
+mntroot=""
+max_wait=30
+waited=0
 
-# Load modules (if needed)
-modprobe loop 2>/dev/null || insmod /usr/lib/loop.ko
-modprobe overlay 2>/dev/null || insmod /usr/lib/overlay.ko
+while [ -z "$mntroot" ] && [ "$waited" -lt "$max_wait" ]; do
+    mntroot=$(blkid -t LABEL="$label" -o device | grep '^/dev/s' | head -n1)
+    if [ -z "$mntroot" ]; then
+        sleep 1
+        waited=$((waited + 1))
+    fi
+done
 
-# Find squashfs image
+if [ -n "$mntroot" ]; then
+    mount -o ro "$mntroot" /mnt/cdrom
+else
+    problem "Cannot locate device with LABEL=$label"
+fi
+
+mountpoint -q /mnt/cdrom || problem "Cannot Mount Filesystem on LABEL=$label"
+
+
 SQUASH=$(find /mnt/cdrom -maxdepth 1 -type f -name '*.squashfs' | head -n 1)
-[ -z "$SQUASH" ] && problem "No squashfs image found on /cdrom"
+[ -z "$SQUASH" ] && problem "No squashfs image found on /mnt/cdrom"
 
 # If rd.live.ram=1, copy to tmpfs
 if [ "$COPYTORAM" = "1" ]; then
@@ -63,11 +78,17 @@ mount -t overlay overlay -o \
 
 # Move mounts and switch root
 echo "Switching to overlay root..."
-mount --move /proc /mnt/merged/proc
-mount --move /sys  /mnt/merged/sys
-mount --move /dev  /mnt/merged/dev
-mount --move /run  /mnt/merged/run
-mount --move /dev/pts /mnt/merged/dev/pts
-mount --move /dev/shm /mnt/merged/dev/shm
-mount --move /sys/fs/cgroup /mnt/merged/sys/fs/cgroup
+for mnt in /proc /sys /dev /run /dev/pts /dev/shm /sys/fs/cgroup; do
+    if mountpoint -q "$mnt"; then
+        mkdir -p "/mnt/merged$mnt"
+        echo "Moving mount $mnt"
+        mount --move "$mnt" "/mnt/merged$mnt" || problem "Failed to move $mnt"
+    else
+        echo "$mnt not mounted, skipping"
+    fi
+done
+
+if [ ! -x /mnt/merged/sbin/init ]; then
+  problem "/sbin/init not found or not executable in new root"
+fi
 exec switch_root /mnt/merged /sbin/init
